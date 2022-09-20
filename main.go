@@ -37,6 +37,13 @@ const ConnectMaxData = 1024 * 1024
 
 var ConnectPayload = []byte("host::\u0000")
 
+type Packet struct {
+	command uint32
+	arg0    uint32
+	arg1    uint32
+	payload []byte
+}
+
 func Connect(conn io.ReadWriter) error {
 	err := WriteConnect(conn)
 	if err != nil {
@@ -46,36 +53,33 @@ func Connect(conn io.ReadWriter) error {
 }
 
 func WriteConnect(w io.Writer) error {
-	err := WritePackage(w, CmdCnxn, ConnectVersion, ConnectMaxData, ConnectPayload)
+	err := WritePacket(w, &Packet{CmdCnxn, ConnectVersion, ConnectMaxData, ConnectPayload})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func WritePackage(
+func WritePacket(
 	w io.Writer,
-	command uint32,
-	arg0 uint32,
-	arg1 uint32,
-	payload []byte,
+	p *Packet,
 ) error {
-	err := WriteLe(w, command)
+	err := WriteLe(w, p.command)
 	if err != nil {
 		return err
 	}
 
-	err = WriteLe(w, arg0)
+	err = WriteLe(w, p.arg0)
 	if err != nil {
 		return err
 	}
 
-	err = WriteLe(w, arg1)
+	err = WriteLe(w, p.arg1)
 	if err != nil {
 		return err
 	}
 
-	if payload == nil {
+	if p.payload == nil {
 		err = WriteLe(w, 0)
 		if err != nil {
 			return err
@@ -85,24 +89,24 @@ func WritePackage(
 			return err
 		}
 	} else {
-		err = WriteLe(w, uint32(len(payload)))
+		err = WriteLe(w, uint32(len(p.payload)))
 		if err != nil {
 			return err
 		}
-		checksum := GetPayloadChecksum(payload)
+		checksum := GetPayloadChecksum(p.payload)
 		err = WriteLe(w, checksum)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = WriteLe(w, command^0xFFFFFFFF)
+	err = WriteLe(w, p.command^0xFFFFFFFF)
 	if err != nil {
 		return err
 	}
 
-	if payload != nil {
-		_, err = w.Write(payload)
+	if p.payload != nil {
+		_, err = w.Write(p.payload)
 		if err != nil {
 			return err
 		}
@@ -111,14 +115,14 @@ func WritePackage(
 	return nil
 }
 
-func WriteLe(w io.Writer, i uint32) error {
-	return binary.Write(w, binary.LittleEndian, i)
-}
-
 func GetPayloadChecksum(payload []byte) uint32 {
 	var checksum uint32 = 0
 	for i := 0; i < len(payload); i++ {
 		checksum += uint32(payload[i])
 	}
 	return checksum
+}
+
+func WriteLe(w io.Writer, i uint32) error {
+	return binary.Write(w, binary.LittleEndian, i)
 }
