@@ -62,7 +62,7 @@ func Connect(conn io.ReadWriter) error {
 }
 
 func WriteConnect(w io.Writer) error {
-	err := WritePacket(w, &Packet{CmdCnxn, ConnectVersion, ConnectMaxData, ConnectPayload})
+	err := WritePacket(w, Packet{CmdCnxn, ConnectVersion, ConnectMaxData, ConnectPayload})
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func WriteConnect(w io.Writer) error {
 
 func WritePacket(
 	w io.Writer,
-	p *Packet,
+	p Packet,
 ) error {
 	h := PacketHeader{
 		command:       p.command,
