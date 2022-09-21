@@ -56,15 +56,15 @@ func writeOpen(w io.Writer, localId uint32, destination string) error {
 	})
 }
 
-func connect(conn io.ReadWriter) (error, connectionResponse) {
+func connect(conn io.ReadWriter) (connectionResponse, error) {
 	err := writeConnect(conn)
 	if err != nil {
-		return err, connectionResponse{}
+		return connectionResponse{}, err
 	}
 
 	p, err := readPacket(conn)
 	if err != nil {
-		return err, connectionResponse{}
+		return connectionResponse{}, err
 	}
 
 	if p.Command == cmdAuth {
@@ -72,20 +72,20 @@ func connect(conn io.ReadWriter) (error, connectionResponse) {
 	}
 
 	if p.Command != cmdCnxn {
-		return fmt.Errorf("connection failed: unexpected command 0x%x", p.Command), connectionResponse{}
+		return connectionResponse{}, fmt.Errorf("connection failed: unexpected command 0x%x", p.Command)
 	}
 
-	err, response := parseConnectionResponse(p)
+	response, err := parseConnectionResponse(p)
 	if err != nil {
-		return err, connectionResponse{}
+		return connectionResponse{}, err
 	}
 
-	return nil, response
+	return response, nil
 }
 
 // parseConnectionResponse
 // eg. device::ro.product.name=sdk_phone_arm64;ro.product.model=Android SDK built for arm64;ro.product.device=emulator_arm64;features=sendrecv_v2_brotli,remount_shell,sendrecv_v2,abb_exec,fixed_push_mkdir,fixed_push_symlink_timestamp,abb,shell_v2,cmd,ls_v2,apex,stat_v2
-func parseConnectionResponse(p packet) (error, connectionResponse) {
+func parseConnectionResponse(p packet) (connectionResponse, error) {
 	connectionStr := string(p.Payload)
 	propsString := strings.SplitN(connectionStr, "device::", 2)[1]
 
@@ -97,7 +97,7 @@ func parseConnectionResponse(p packet) (error, connectionResponse) {
 
 	featuresString, exists := props["features"]
 	if !exists {
-		return fmt.Errorf("failed to parse connection string: features not found (%s)", connectionStr), connectionResponse{}
+		return connectionResponse{}, fmt.Errorf("failed to parse connection string: features not found (%s)", connectionStr)
 	}
 
 	features := make(map[string]struct{})
@@ -105,12 +105,12 @@ func parseConnectionResponse(p packet) (error, connectionResponse) {
 		features[feature] = struct{}{}
 	}
 
-	return nil, connectionResponse{
+	return connectionResponse{
 		version:        p.Arg0,
 		maxPayloadSize: p.Arg1,
 		props:          props,
 		features:       features,
-	}
+	}, nil
 }
 
 func writeConnect(w io.Writer) error {
