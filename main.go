@@ -24,7 +24,7 @@ func main() {
 
 	all, err := io.ReadAll(stream)
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	log.Println(string(all))
