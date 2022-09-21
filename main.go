@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 )
 
 func main() {
@@ -16,10 +17,12 @@ func main() {
 		panic(err)
 	}
 
-	err = Connect(conn)
+	err, connectionResponse := Connect(conn)
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf("%v", connectionResponse)
 
 	conn.Close()
 }
@@ -56,15 +59,22 @@ type PacketHeader struct {
 	Magic         uint32
 }
 
-func Connect(conn io.ReadWriter) error {
+type ConnectionResponse struct {
+	version        uint32
+	maxPayloadSize uint32
+	props          map[string]string
+	features       map[string]struct{}
+}
+
+func Connect(conn io.ReadWriter) (error, ConnectionResponse) {
 	err := WriteConnect(conn)
 	if err != nil {
-		return err
+		return err, ConnectionResponse{}
 	}
 
 	p, err := ReadPacket(conn)
 	if err != nil {
-		return err
+		return err, ConnectionResponse{}
 	}
 
 	if p.Command == CmdAuth {
@@ -72,10 +82,45 @@ func Connect(conn io.ReadWriter) error {
 	}
 
 	if p.Command != CmdCnxn {
-		return fmt.Errorf("connection failed: unexpected command 0x%x", p.Command)
+		return fmt.Errorf("connection failed: unexpected command 0x%x", p.Command), ConnectionResponse{}
 	}
 
-	return nil
+	err, connectionResponse := ParseConnectionResponse(p)
+	if err != nil {
+		return err, ConnectionResponse{}
+	}
+
+	return nil, connectionResponse
+}
+
+// ParseConnectionResponse
+// eg. device::ro.product.name=sdk_phone_arm64;ro.product.model=Android SDK built for arm64;ro.product.device=emulator_arm64;features=sendrecv_v2_brotli,remount_shell,sendrecv_v2,abb_exec,fixed_push_mkdir,fixed_push_symlink_timestamp,abb,shell_v2,cmd,ls_v2,apex,stat_v2
+func ParseConnectionResponse(p Packet) (error, ConnectionResponse) {
+	connectionStr := string(p.Payload)
+	propsString := strings.SplitN(connectionStr, "device::", 2)[1]
+
+	props := make(map[string]string)
+	for _, prop := range strings.Split(propsString, ";") {
+		propParts := strings.SplitN(prop, "=", 2)
+		props[propParts[0]] = propParts[1]
+	}
+
+	featuresString, exists := props["features"]
+	if !exists {
+		return fmt.Errorf("failed to parse connection string: features not found (%s)", connectionStr), ConnectionResponse{}
+	}
+
+	features := make(map[string]struct{})
+	for _, feature := range strings.Split(featuresString, ",") {
+		features[feature] = struct{}{}
+	}
+
+	return nil, ConnectionResponse{
+		version:        p.Arg0,
+		maxPayloadSize: p.Arg1,
+		props:          props,
+		features:       features,
+	}
 }
 
 func WriteConnect(w io.Writer) error {
