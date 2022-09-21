@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync/atomic"
 )
 
 type Connection struct {
-	closer             io.Closer
+	close              chan struct{}
 	rw                 io.ReadWriter
 	connectionResponse connectionResponse
 	nextLocalId        uint32
@@ -25,12 +26,33 @@ func Connect(conn net.Conn) (error, *Connection) {
 	if err != nil {
 		return err, nil
 	}
+
+	closeCh := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-closeCh:
+				err := conn.Close()
+				if err != nil {
+					log.Println(err)
+				}
+				return
+			}
+		}
+	}()
+
 	return nil, &Connection{
-		closer:             conn,
+		close:              closeCh,
 		rw:                 conn,
 		connectionResponse: response,
 		nextLocalId:        0,
 	}
+}
+
+func (c *Connection) Close() error {
+	c.close <- struct{}{}
+	return nil
 }
 
 func (c *Connection) Open(destination string) (error, *Stream) {
