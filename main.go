@@ -16,7 +16,10 @@ func main() {
 		panic(err)
 	}
 
-	Connect(conn)
+	err = Connect(conn)
+	if err != nil {
+		panic(err)
+	}
 
 	conn.Close()
 }
@@ -38,19 +41,19 @@ const ConnectMaxData = 1024 * 1024
 var ConnectPayload = []byte("host::\u0000")
 
 type Packet struct {
-	command uint32
-	arg0    uint32
-	arg1    uint32
-	payload []byte
+	Command uint32
+	Arg0    uint32
+	Arg1    uint32
+	Payload []byte
 }
 
 type PacketHeader struct {
-	command       uint32
-	arg0          uint32
-	arg1          uint32
-	payloadLength uint32
-	checksum      uint32
-	magic         uint32
+	Command       uint32
+	Arg0          uint32
+	Arg1          uint32
+	PayloadLength uint32
+	Checksum      uint32
+	Magic         uint32
 }
 
 func Connect(conn io.ReadWriter) error {
@@ -58,6 +61,11 @@ func Connect(conn io.ReadWriter) error {
 	if err != nil {
 		return err
 	}
+	p, err := ReadPacket(conn)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("==%v", p)
 	return nil
 }
 
@@ -69,17 +77,35 @@ func WriteConnect(w io.Writer) error {
 	return nil
 }
 
-func WritePacket(
-	w io.Writer,
-	p Packet,
-) error {
+func ReadPacket(r io.Reader) (Packet, error) {
+	var h PacketHeader
+	err := binary.Read(r, binary.LittleEndian, &h)
+	if err != nil {
+		return Packet{}, err
+	}
+
+	payload := make([]byte, h.PayloadLength)
+	_, err = r.Read(payload)
+	if err != nil {
+		return Packet{}, err
+	}
+
+	return Packet{
+		Command: h.Command,
+		Arg0:    h.Arg0,
+		Arg1:    h.Arg1,
+		Payload: payload,
+	}, nil
+}
+
+func WritePacket(w io.Writer, p Packet) error {
 	h := PacketHeader{
-		command:       p.command,
-		arg0:          p.arg0,
-		arg1:          p.arg1,
-		payloadLength: uint32(len(p.payload)),
-		checksum:      GetPayloadChecksum(p.payload),
-		magic:         p.command ^ 0xFFFFFFFF,
+		Command:       p.Command,
+		Arg0:          p.Arg0,
+		Arg1:          p.Arg1,
+		PayloadLength: uint32(len(p.Payload)),
+		Checksum:      GetPayloadChecksum(p.Payload),
+		Magic:         p.Command ^ 0xFFFFFFFF,
 	}
 
 	err := binary.Write(w, binary.LittleEndian, h)
@@ -87,8 +113,8 @@ func WritePacket(
 		return err
 	}
 
-	if p.payload != nil {
-		_, err = w.Write(p.payload)
+	if p.Payload != nil {
+		_, err = w.Write(p.Payload)
 		if err != nil {
 			return err
 		}
