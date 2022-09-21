@@ -10,6 +10,7 @@ import (
 
 type Connection struct {
 	close              chan struct{}
+	conn               *Connection
 	rw                 io.ReadWriter
 	connectionResponse connectionResponse
 	nextLocalId        uint32
@@ -27,26 +28,28 @@ func Connect(conn net.Conn) (error, *Connection) {
 		return err, nil
 	}
 
-	closeCh := make(chan struct{})
-
-	go func() {
-		for {
-			select {
-			case <-closeCh:
-				err := conn.Close()
-				if err != nil {
-					log.Println(err)
-				}
-				return
-			}
-		}
-	}()
-
-	return nil, &Connection{
-		close:              closeCh,
+	connection := Connection{
+		close:              make(chan struct{}),
 		rw:                 conn,
 		connectionResponse: response,
 		nextLocalId:        0,
+	}
+
+	go connection.loop()
+
+	return nil, &connection
+}
+
+func (c *Connection) loop() {
+	for {
+		select {
+		case <-c.close:
+			err := c.conn.Close()
+			if err != nil {
+				log.Println(err)
+			}
+			return
+		}
 	}
 }
 
