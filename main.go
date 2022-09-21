@@ -33,5 +33,11 @@ func main() {
 
 	fmt.Println(packet)
 
-	conn.Close()
+	packet, _ = ReadPacket(conn)
+	fmt.Println(string(packet.Payload))
+
+	err = conn.Close()
+	if err != nil {
+		panic(err)
+	}
 }
