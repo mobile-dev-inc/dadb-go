@@ -46,6 +46,16 @@ type ConnectionResponse struct {
 	features       map[string]struct{}
 }
 
+func WriteOpen(w io.Writer, localId uint32, destination string) error {
+	destinationBytes := append([]byte(destination), 0)
+	return WritePacket(w, Packet{
+		Command: CmdOpen,
+		Arg0:    localId,
+		Arg1:    0,
+		Payload: destinationBytes,
+	})
+}
+
 func Connect(conn io.ReadWriter) (error, ConnectionResponse) {
 	err := WriteConnect(conn)
 	if err != nil {
@@ -119,7 +129,7 @@ func ReadPacket(r io.Reader) (Packet, error) {
 	}
 
 	payload := make([]byte, h.PayloadLength)
-	_, err = r.Read(payload)
+	_, err = io.ReadFull(r, payload)
 	if err != nil {
 		return Packet{}, err
 	}

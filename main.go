@@ -19,7 +19,19 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("%v", connectionResponse)
+	fmt.Printf("%v\n", connectionResponse)
+
+	err = WriteOpen(conn, 1, "shell:echo hello")
+	if err != nil {
+		panic(err)
+	}
+
+	packet, err := ReadPacket(conn)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(packet)
 
 	conn.Close()
 }
