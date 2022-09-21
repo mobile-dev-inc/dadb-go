@@ -61,11 +61,20 @@ func Connect(conn io.ReadWriter) error {
 	if err != nil {
 		return err
 	}
+
 	p, err := ReadPacket(conn)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("==%v", p)
+
+	if p.Command == CmdAuth {
+		panic("Not Implemented")
+	}
+
+	if p.Command != CmdCnxn {
+		return fmt.Errorf("connection failed: unexpected command 0x%x", p.Command)
+	}
+
 	return nil
 }
 
