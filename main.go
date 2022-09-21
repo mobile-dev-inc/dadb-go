@@ -14,26 +14,26 @@ func main() {
 		panic(err)
 	}
 
-	err, connectionResponse := Connect(conn)
+	err, connectionResponse := connect(conn)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Printf("%v\n", connectionResponse)
 
-	err = WriteOpen(conn, 1, "shell:echo hello")
+	err = writeOpen(conn, 1, "shell:echo hello")
 	if err != nil {
 		panic(err)
 	}
 
-	packet, err := ReadPacket(conn)
+	packet, err := readPacket(conn)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println(packet)
 
-	packet, _ = ReadPacket(conn)
+	packet, _ = readPacket(conn)
 	fmt.Println(string(packet.Payload))
 
 	err = conn.Close()

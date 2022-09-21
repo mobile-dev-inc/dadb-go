@@ -7,30 +7,30 @@ import (
 	"strings"
 )
 
-const AuthTypeToken = 1
-const AuthTypeSignature = 2
-const AuthTypeRsaPublic = 3
+const authTypeToken = 1
+const authTypeSignature = 2
+const authTypeRsaPublic = 3
 
-const CmdAuth = 0x48545541
-const CmdCnxn = 0x4e584e43
-const CmdOpen = 0x4e45504f
-const CmdOkay = 0x59414b4f
-const CmdClse = 0x45534c43
-const CmdWrte = 0x45545257
+const cmdAuth = 0x48545541
+const cmdCnxn = 0x4e584e43
+const cmdOpen = 0x4e45504f
+const cmdOkay = 0x59414b4f
+const cmdClse = 0x45534c43
+const cmdWrte = 0x45545257
 
-const ConnectVersion = 0x01000000
-const ConnectMaxData = 1024 * 1024
+const connectVersion = 0x01000000
+const connectMaxData = 1024 * 1024
 
-var ConnectPayload = []byte("host::\u0000")
+var connectPayload = []byte("host::\u0000")
 
-type Packet struct {
+type packet struct {
 	Command uint32
 	Arg0    uint32
 	Arg1    uint32
 	Payload []byte
 }
 
-type PacketHeader struct {
+type packetHeader struct {
 	Command       uint32
 	Arg0          uint32
 	Arg1          uint32
@@ -39,53 +39,53 @@ type PacketHeader struct {
 	Magic         uint32
 }
 
-type ConnectionResponse struct {
+type connectionResponse struct {
 	version        uint32
 	maxPayloadSize uint32
 	props          map[string]string
 	features       map[string]struct{}
 }
 
-func WriteOpen(w io.Writer, localId uint32, destination string) error {
+func writeOpen(w io.Writer, localId uint32, destination string) error {
 	destinationBytes := append([]byte(destination), 0)
-	return WritePacket(w, Packet{
-		Command: CmdOpen,
+	return writePacket(w, packet{
+		Command: cmdOpen,
 		Arg0:    localId,
 		Arg1:    0,
 		Payload: destinationBytes,
 	})
 }
 
-func Connect(conn io.ReadWriter) (error, ConnectionResponse) {
-	err := WriteConnect(conn)
+func connect(conn io.ReadWriter) (error, connectionResponse) {
+	err := writeConnect(conn)
 	if err != nil {
-		return err, ConnectionResponse{}
+		return err, connectionResponse{}
 	}
 
-	p, err := ReadPacket(conn)
+	p, err := readPacket(conn)
 	if err != nil {
-		return err, ConnectionResponse{}
+		return err, connectionResponse{}
 	}
 
-	if p.Command == CmdAuth {
+	if p.Command == cmdAuth {
 		panic("Not Implemented")
 	}
 
-	if p.Command != CmdCnxn {
-		return fmt.Errorf("connection failed: unexpected command 0x%x", p.Command), ConnectionResponse{}
+	if p.Command != cmdCnxn {
+		return fmt.Errorf("connection failed: unexpected command 0x%x", p.Command), connectionResponse{}
 	}
 
-	err, connectionResponse := ParseConnectionResponse(p)
+	err, response := parseConnectionResponse(p)
 	if err != nil {
-		return err, ConnectionResponse{}
+		return err, connectionResponse{}
 	}
 
-	return nil, connectionResponse
+	return nil, response
 }
 
-// ParseConnectionResponse
+// parseConnectionResponse
 // eg. device::ro.product.name=sdk_phone_arm64;ro.product.model=Android SDK built for arm64;ro.product.device=emulator_arm64;features=sendrecv_v2_brotli,remount_shell,sendrecv_v2,abb_exec,fixed_push_mkdir,fixed_push_symlink_timestamp,abb,shell_v2,cmd,ls_v2,apex,stat_v2
-func ParseConnectionResponse(p Packet) (error, ConnectionResponse) {
+func parseConnectionResponse(p packet) (error, connectionResponse) {
 	connectionStr := string(p.Payload)
 	propsString := strings.SplitN(connectionStr, "device::", 2)[1]
 
@@ -97,7 +97,7 @@ func ParseConnectionResponse(p Packet) (error, ConnectionResponse) {
 
 	featuresString, exists := props["features"]
 	if !exists {
-		return fmt.Errorf("failed to parse connection string: features not found (%s)", connectionStr), ConnectionResponse{}
+		return fmt.Errorf("failed to parse connection string: features not found (%s)", connectionStr), connectionResponse{}
 	}
 
 	features := make(map[string]struct{})
@@ -105,7 +105,7 @@ func ParseConnectionResponse(p Packet) (error, ConnectionResponse) {
 		features[feature] = struct{}{}
 	}
 
-	return nil, ConnectionResponse{
+	return nil, connectionResponse{
 		version:        p.Arg0,
 		maxPayloadSize: p.Arg1,
 		props:          props,
@@ -113,28 +113,28 @@ func ParseConnectionResponse(p Packet) (error, ConnectionResponse) {
 	}
 }
 
-func WriteConnect(w io.Writer) error {
-	err := WritePacket(w, Packet{CmdCnxn, ConnectVersion, ConnectMaxData, ConnectPayload})
+func writeConnect(w io.Writer) error {
+	err := writePacket(w, packet{cmdCnxn, connectVersion, connectMaxData, connectPayload})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func ReadPacket(r io.Reader) (Packet, error) {
-	var h PacketHeader
+func readPacket(r io.Reader) (packet, error) {
+	var h packetHeader
 	err := binary.Read(r, binary.LittleEndian, &h)
 	if err != nil {
-		return Packet{}, err
+		return packet{}, err
 	}
 
 	payload := make([]byte, h.PayloadLength)
 	_, err = io.ReadFull(r, payload)
 	if err != nil {
-		return Packet{}, err
+		return packet{}, err
 	}
 
-	return Packet{
+	return packet{
 		Command: h.Command,
 		Arg0:    h.Arg0,
 		Arg1:    h.Arg1,
@@ -142,13 +142,13 @@ func ReadPacket(r io.Reader) (Packet, error) {
 	}, nil
 }
 
-func WritePacket(w io.Writer, p Packet) error {
-	h := PacketHeader{
+func writePacket(w io.Writer, p packet) error {
+	h := packetHeader{
 		Command:       p.Command,
 		Arg0:          p.Arg0,
 		Arg1:          p.Arg1,
 		PayloadLength: uint32(len(p.Payload)),
-		Checksum:      GetPayloadChecksum(p.Payload),
+		Checksum:      getPayloadChecksum(p.Payload),
 		Magic:         p.Command ^ 0xFFFFFFFF,
 	}
 
@@ -167,7 +167,7 @@ func WritePacket(w io.Writer, p Packet) error {
 	return nil
 }
 
-func GetPayloadChecksum(payload []byte) uint32 {
+func getPayloadChecksum(payload []byte) uint32 {
 	if payload == nil {
 		return 0
 	}
