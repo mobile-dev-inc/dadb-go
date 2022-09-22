@@ -1,28 +1,33 @@
 package main
 
-import (
-	"fmt"
-	"io"
-)
-
 type Stream struct {
 	connection *Connection
 	localId    uint32
 	remoteId   uint32
 
-	ch      chan packet
 	payload []byte
 }
 
 func (s *Stream) Read(p []byte) (int, error) {
-	payload, err := s.getPayload()
-	if err != nil {
-		return 0, err
+	if len(s.payload) == 0 {
+		pkt := <-s.connection.getChannel(s.localId, cmdWrte)
+		s.payload = pkt.Payload
+
+		err := writePacket(s.connection.rw, packet{
+			Command: cmdOkay,
+			Arg0:    s.localId,
+			Arg1:    s.remoteId,
+			Payload: nil,
+		})
+
+		if err != nil {
+			return 0, err
+		}
 	}
 
-	n := copy(p, payload)
+	n := copy(p, s.payload)
 
-	s.payload = payload[n:]
+	s.payload = s.payload[n:]
 
 	return n, nil
 }
@@ -40,14 +45,7 @@ func (s *Stream) Write(p []byte) (int, error) {
 		return 0, err
 	}
 
-	pkt, err := s.readPacket()
-	if err != nil {
-		return 0, err
-	}
-
-	if pkt.Command != cmdOkay {
-		return 0, fmt.Errorf("unexpected: command received 0x%x", pkt.Command)
-	}
+	<-s.connection.getChannel(s.localId, cmdOkay)
 
 	return len(p), nil
 }
@@ -57,21 +55,9 @@ func (s *Stream) getPayload() ([]byte, error) {
 		return s.payload, nil
 	}
 
-	pkt, err := s.readPacket()
+	pkt := <-s.connection.getChannel(s.localId, cmdWrte)
 
-	if err != nil {
-		return nil, err
-	}
-
-	if pkt.Command == cmdClse {
-		return nil, io.EOF
-	}
-
-	if pkt.Command != cmdWrte {
-		return nil, fmt.Errorf("unexpected: command received 0x%x", pkt.Command)
-	}
-
-	err = writePacket(s.connection.rw, packet{
+	err := writePacket(s.connection.rw, packet{
 		Command: cmdOkay,
 		Arg0:    s.localId,
 		Arg1:    s.remoteId,
@@ -83,13 +69,4 @@ func (s *Stream) getPayload() ([]byte, error) {
 	}
 
 	return pkt.Payload, nil
-}
-
-func (s *Stream) readPacket() (packet, error) {
-	ch := s.connection.getStreamChannel(s.localId)
-	if ch == nil {
-		return packet{}, fmt.Errorf("could not find channel for read: local id=0x%x", s.localId)
-	}
-
-	return <-ch, nil
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -16,8 +15,8 @@ type Connection struct {
 	closer             io.Closer
 	connectionResponse connectionResponse
 
-	nextLocalId    uint32
-	streamChannels map[uint32]chan packet
+	nextLocalId uint32
+	channels    map[uint32]map[uint32]chan packet
 }
 
 func Connect(conn net.Conn) (*Connection, error) {
@@ -31,7 +30,7 @@ func Connect(conn net.Conn) (*Connection, error) {
 		closer:             conn,
 		connectionResponse: response,
 		nextLocalId:        0,
-		streamChannels:     make(map[uint32]chan packet),
+		channels:           make(map[uint32]map[uint32]chan packet),
 	}
 
 	go func() {
@@ -43,11 +42,8 @@ func Connect(conn net.Conn) (*Connection, error) {
 			}
 
 			localId := p.Arg1
-			ch := connection.getStreamChannel(localId)
-			if ch == nil {
-				log.Printf("TODO: Error in Connection goroutine: no channel for localId 0x%x\n", localId)
-				return
-			}
+			cmd := p.Command
+			ch := connection.getChannel(localId, cmd)
 			ch <- p
 		}
 	}()
@@ -58,33 +54,47 @@ func Connect(conn net.Conn) (*Connection, error) {
 func (c *Connection) Open(destination string) (*Stream, error) {
 	localId := atomic.AddUint32(&c.nextLocalId, 1)
 
-	ch := make(chan packet, 100)
-
-	c.Lock()
-	c.streamChannels[localId] = ch
 	err := writeOpen(c.rw, localId, destination)
 	if err != nil {
 		return nil, err
 	}
-	c.Unlock()
 
-	p := <-ch
-	if p.Command != cmdOkay {
-		return nil, fmt.Errorf("unexpected command: 0x%x", p.Arg0)
-	}
-
+	p := <-c.getChannel(localId, cmdOkay)
 	remoteId := p.Arg0
 
 	return &Stream{
 		connection: c,
 		localId:    localId,
 		remoteId:   remoteId,
-		ch:         ch,
 	}, nil
 }
 
-func (c *Connection) getStreamChannel(localId uint32) chan packet {
+func (c *Connection) getChannel(localId uint32, cmd uint32) chan packet {
+	// Fast path: Channel already exists - Only acquire read lock
 	c.RLock()
-	defer c.RUnlock()
-	return c.streamChannels[localId]
+	m := c.channels[localId]
+	if m != nil {
+		ch := m[cmd]
+		if ch != nil {
+			c.RUnlock()
+			return ch
+		}
+	}
+	c.RUnlock()
+
+	// Slow path: Channel does not exist - Acquire write lock
+	c.Lock()
+	defer c.Unlock()
+
+	m = c.channels[localId]
+	if m == nil {
+		m = make(map[uint32]chan packet)
+		c.channels[localId] = m
+	}
+	ch := m[cmd]
+	if ch == nil {
+		ch = make(chan packet, 100)
+		m[cmd] = ch
+	}
+	return ch
 }
