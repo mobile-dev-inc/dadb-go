@@ -1,9 +1,9 @@
 package main
 
 import (
-	"io"
-	"log"
+	"golang.org/x/sync/errgroup"
 	"net"
+	"time"
 )
 
 func main() {
@@ -17,16 +17,35 @@ func main() {
 		panic(err)
 	}
 
-	stream, err := connection.Open("shell:echo hello")
+	stream, err := connection.Open("shell:")
 	if err != nil {
 		panic(err)
 	}
 
-	all, err := io.ReadAll(stream)
+	eg := &errgroup.Group{}
+
+	eg.Go(func() error {
+		_, err = stream.Write([]byte("echo hello\n"))
+		if err != nil {
+			return err
+		}
+		time.Sleep(100 * time.Millisecond)
+
+		return nil
+	})
+
+	eg.Go(func() error {
+		packet, err := stream.readPacket()
+		if err != nil {
+			return err
+		}
+		print(string(packet.Payload))
+
+		return nil
+	})
+
+	err = eg.Wait()
 	if err != nil {
 		panic(err)
 	}
-
-	log.Println(len(all))
-	log.Println(string(all))
 }
