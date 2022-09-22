@@ -3,7 +3,7 @@ package main
 import (
 	"golang.org/x/sync/errgroup"
 	"net"
-	"time"
+	"os"
 )
 
 func main() {
@@ -25,13 +25,17 @@ func main() {
 	eg := &errgroup.Group{}
 
 	eg.Go(func() error {
-		_, err = stream.Write([]byte("echo hello\n"))
-		if err != nil {
-			return err
+		b := make([]byte, 1)
+		for {
+			_, err := os.Stdin.Read(b)
+			if err != nil {
+				return err
+			}
+			_, err = stream.Write(b)
+			if err != nil {
+				return err
+			}
 		}
-		time.Sleep(100 * time.Millisecond)
-
-		return nil
 	})
 
 	eg.Go(func() error {
