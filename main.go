@@ -27,5 +27,6 @@ func main() {
 		panic(err)
 	}
 
+	log.Println(len(all))
 	log.Println(string(all))
 }

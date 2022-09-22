@@ -28,6 +28,7 @@ func (s *Stream) Read(p []byte) (int, error) {
 }
 
 func (s *Stream) Write(p []byte) (int, error) {
+	// TODO what about when len(p) > s.connection.connectionResponse.maxPayloadSize?
 	err := writePacket(s.connection.rw, packet{
 		Command: cmdWrte,
 		Arg0:    s.localId,
@@ -57,6 +58,7 @@ func (s *Stream) getPayload() ([]byte, error) {
 	}
 
 	pkt, err := s.readPacket()
+
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +69,17 @@ func (s *Stream) getPayload() ([]byte, error) {
 
 	if pkt.Command != cmdWrte {
 		return nil, fmt.Errorf("unexpected: command received 0x%x", pkt.Command)
+	}
+
+	err = writePacket(s.connection.rw, packet{
+		Command: cmdOkay,
+		Arg0:    s.localId,
+		Arg1:    s.remoteId,
+		Payload: nil,
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	return pkt.Payload, nil
