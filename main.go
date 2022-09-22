@@ -35,13 +35,14 @@ func main() {
 	})
 
 	eg.Go(func() error {
-		packet, err := stream.readPacket()
-		if err != nil {
-			return err
+		for {
+			buffer := make([]byte, 1024)
+			n, err := stream.Read(buffer)
+			if err != nil {
+				return err
+			}
+			print(string(buffer[:n]))
 		}
-		print(string(packet.Payload))
-
-		return nil
 	})
 
 	err = eg.Wait()
