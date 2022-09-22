@@ -27,25 +27,56 @@ func (s *Stream) Read(p []byte) (int, error) {
 	return n, nil
 }
 
+func (s *Stream) Write(p []byte) (int, error) {
+	err := writePacket(s.connection.rw, packet{
+		Command: cmdWrte,
+		Arg0:    s.localId,
+		Arg1:    s.remoteId,
+		Payload: p,
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	pkt, err := s.readPacket()
+	if err != nil {
+		return 0, err
+	}
+
+	if pkt.Command != cmdOkay {
+		return 0, fmt.Errorf("unexpected: command received 0x%x", pkt.Command)
+	}
+
+	return len(p), nil
+}
+
 func (s *Stream) getPayload() ([]byte, error) {
 	if len(s.payload) > 0 {
 		return s.payload, nil
 	}
 
-	ch := s.connection.getStreamChannel(s.localId)
-	if ch == nil {
-		return nil, fmt.Errorf("could not find channel for read: local id=0x%x", s.localId)
+	pkt, err := s.readPacket()
+	if err != nil {
+		return nil, err
 	}
 
-	p := <-ch
-
-	if p.Command == cmdClse {
+	if pkt.Command == cmdClse {
 		return nil, io.EOF
 	}
 
-	if p.Command != cmdWrte {
-		return nil, fmt.Errorf("unexpected: command received 0x%x", p.Command)
+	if pkt.Command != cmdWrte {
+		return nil, fmt.Errorf("unexpected: command received 0x%x", pkt.Command)
 	}
 
-	return p.Payload, nil
+	return pkt.Payload, nil
+}
+
+func (s *Stream) readPacket() (packet, error) {
+	ch := s.connection.getStreamChannel(s.localId)
+	if ch == nil {
+		return packet{}, fmt.Errorf("could not find channel for read: local id=0x%x", s.localId)
+	}
+
+	return <-ch, nil
 }
