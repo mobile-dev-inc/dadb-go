@@ -11,6 +11,18 @@ import (
 	"testing"
 )
 
+func withStream(
+	t *testing.T,
+	d dadb.Dadb,
+	destination string,
+	f func(t *testing.T, d dadb.Dadb, stream dadb.Stream),
+) {
+	stream, err := d.Open(destination)
+	require.NoError(t, err)
+	defer close(t, stream)
+	f(t, d, stream)
+}
+
 func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
 	run := func(name string, f func(t *testing.T, d dadb.Dadb)) {
 		testName := fmt.Sprintf("%s/%s", prefix, name)
