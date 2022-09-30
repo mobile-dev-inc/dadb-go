@@ -3,7 +3,7 @@ package adbd
 import "io"
 
 type stream struct {
-	connection *Connection
+	connection *connection
 	localId    uint32
 	remoteId   uint32
 

@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 )
 
-type Connection struct {
+type connection struct {
 	sync.RWMutex
 
 	rw                 io.ReadWriter
@@ -21,13 +21,13 @@ type Connection struct {
 	closedStreams map[uint32]struct{}
 }
 
-func Connect(conn net.Conn) (*Connection, error) {
+func Connect(conn net.Conn) (dadb.Dadb, error) {
 	response, err := connect(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	connection := Connection{
+	connection := connection{
 		rw:                 conn,
 		closer:             conn,
 		connectionResponse: response,
@@ -64,7 +64,7 @@ func Connect(conn net.Conn) (*Connection, error) {
 	return &connection, nil
 }
 
-func (c *Connection) Open(destination string) (dadb.Stream, error) {
+func (c *connection) Open(destination string) (dadb.Stream, error) {
 	localId := atomic.AddUint32(&c.nextLocalId, 1)
 
 	err := writeOpen(c.rw, localId, destination)
@@ -82,7 +82,7 @@ func (c *Connection) Open(destination string) (dadb.Stream, error) {
 	}, nil
 }
 
-func (c *Connection) closeStream(localId uint32) {
+func (c *connection) closeStream(localId uint32) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -97,7 +97,7 @@ func (c *Connection) closeStream(localId uint32) {
 	}
 }
 
-func (c *Connection) getChannel(localId uint32, cmd uint32) chan packet {
+func (c *connection) getChannel(localId uint32, cmd uint32) chan packet {
 	// Fast path: Channel already exists - Only acquire read lock
 	c.RLock()
 	m := c.channels[localId]
