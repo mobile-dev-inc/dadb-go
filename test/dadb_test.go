@@ -15,12 +15,12 @@ func withStream(
 	t *testing.T,
 	d dadb.Dadb,
 	destination string,
-	f func(t *testing.T, d dadb.Dadb, stream dadb.Stream),
+	f func(stream dadb.Stream),
 ) {
 	stream, err := d.Open(destination)
 	require.NoError(t, err)
 	defer close(t, stream)
-	f(t, d, stream)
+	f(stream)
 }
 
 func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
