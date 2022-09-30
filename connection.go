@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 )
 
-type Connection struct {
+type AdbdConnection struct {
 	sync.RWMutex
 
 	rw                 io.ReadWriter
@@ -19,13 +19,13 @@ type Connection struct {
 	channels    map[uint32]map[uint32]chan packet
 }
 
-func Connect(conn net.Conn) (*Connection, error) {
+func AdbdConnect(conn net.Conn) (*AdbdConnection, error) {
 	response, err := connect(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	connection := Connection{
+	connection := AdbdConnection{
 		rw:                 conn,
 		closer:             conn,
 		connectionResponse: response,
@@ -37,7 +37,7 @@ func Connect(conn net.Conn) (*Connection, error) {
 		for {
 			p, err := readPacket(conn)
 			if err != nil {
-				log.Printf("TODO: Error in Connection goroutine: %v\n", err)
+				log.Printf("TODO: Error in AdbdConnection goroutine: %v\n", err)
 				return
 			}
 
@@ -51,7 +51,7 @@ func Connect(conn net.Conn) (*Connection, error) {
 	return &connection, nil
 }
 
-func (c *Connection) Open(destination string) (*Stream, error) {
+func (c *AdbdConnection) Open(destination string) (Stream, error) {
 	localId := atomic.AddUint32(&c.nextLocalId, 1)
 
 	err := writeOpen(c.rw, localId, destination)
@@ -62,14 +62,14 @@ func (c *Connection) Open(destination string) (*Stream, error) {
 	p := <-c.getChannel(localId, cmdOkay)
 	remoteId := p.Arg0
 
-	return &Stream{
+	return &AdbdStream{
 		connection: c,
 		localId:    localId,
 		remoteId:   remoteId,
 	}, nil
 }
 
-func (c *Connection) getChannel(localId uint32, cmd uint32) chan packet {
+func (c *AdbdConnection) getChannel(localId uint32, cmd uint32) chan packet {
 	// Fast path: Channel already exists - Only acquire read lock
 	c.RLock()
 	m := c.channels[localId]

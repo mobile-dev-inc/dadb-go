@@ -12,7 +12,7 @@ func main() {
 		panic(err)
 	}
 
-	connection, err := Connect(conn)
+	connection, err := AdbdConnect(conn)
 	if err != nil {
 		panic(err)
 	}
