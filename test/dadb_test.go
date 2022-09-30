@@ -31,7 +31,6 @@ func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
 		})
 	}
 	run("shellV1", shellV1)
-	run("shellV1Close", shellV1Close)
 }
 
 func TestDadb(t *testing.T) {
