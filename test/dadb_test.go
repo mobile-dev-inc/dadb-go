@@ -3,24 +3,31 @@ package test
 import (
 	"dadb"
 	"dadb/adbd"
+	"github.com/stretchr/testify/require"
+	"io"
 	"net"
 	"testing"
 )
 
 func TestDadb(t *testing.T) {
+	adbdDadb := createAdbdDadb(t)
+	runDadbTest(t, adbdDadb)
+}
+
+func createAdbdDadb(t *testing.T) dadb.Dadb {
 	conn, err := net.Dial("tcp", "localhost:5555")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.Nil(t, err)
 	dadb, err := adbd.Connect(conn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	runDadbTest(t, dadb)
+	require.Nil(t, err)
+	return dadb
 }
 
 func runDadbTest(t *testing.T, d dadb.Dadb) {
-	t.Run("Hello", func(t *testing.T) {
-
+	t.Run("shellV1", func(t *testing.T) {
+		stream, err := d.Open("shell:echo hello")
+		require.Nil(t, err)
+		output, err := io.ReadAll(stream)
+		require.Nil(t, err)
+		require.Equal(t, string(output), "hello")
 	})
 }
