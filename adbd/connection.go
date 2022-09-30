@@ -75,7 +75,7 @@ func (c *Connection) Open(destination string) (dadb.Stream, error) {
 	p := <-c.getChannel(localId, cmdOkay)
 	remoteId := p.Arg0
 
-	return &Stream{
+	return &stream{
 		connection: c,
 		localId:    localId,
 		remoteId:   remoteId,
