@@ -1,5 +1,7 @@
 package adbd
 
+import "io"
+
 type Stream struct {
 	connection *Connection
 	localId    uint32
@@ -15,7 +17,11 @@ func (s *Stream) SupportsFeature(feature string) bool {
 
 func (s *Stream) Read(p []byte) (int, error) {
 	if len(s.payload) == 0 {
-		pkt := <-s.connection.getChannel(s.localId, cmdWrte)
+		pkt, ok := <-s.connection.getChannel(s.localId, cmdWrte)
+		if !ok {
+			return 0, io.EOF
+		}
+
 		s.payload = pkt.Payload
 
 		err := writePacket(s.connection.rw, packet{

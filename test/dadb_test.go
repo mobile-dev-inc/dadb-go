@@ -28,6 +28,6 @@ func runDadbTest(t *testing.T, d dadb.Dadb) {
 		require.Nil(t, err)
 		output, err := io.ReadAll(stream)
 		require.Nil(t, err)
-		require.Equal(t, string(output), "hello")
+		require.Equal(t, string(output), "hello\n")
 	})
 }
