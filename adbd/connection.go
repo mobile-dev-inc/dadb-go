@@ -82,6 +82,11 @@ func (c *connection) Open(destination string) (dadb.Stream, error) {
 	}, nil
 }
 
+func (c *connection) SupportsFeature(feature string) bool {
+	_, ok := c.connectionResponse.features[feature]
+	return ok
+}
+
 func (c *connection) closeStream(localId uint32) {
 	c.Lock()
 	defer c.Unlock()

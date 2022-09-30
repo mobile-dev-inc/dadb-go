@@ -43,6 +43,11 @@ func (c connection) Open(destination string) (dadb.Stream, error) {
 	}, nil
 }
 
+func (c connection) SupportsFeature(feature string) bool {
+	_, ok := c.features[feature]
+	return ok
+}
+
 func readFeatures(address string, deviceQuery string) (map[string]struct{}, error) {
 	rw, err := open(address, deviceQuery, "host:features")
 	if err != nil {
@@ -74,11 +79,6 @@ func open(address string, deviceQuery string, destination string) (io.ReadWriter
 		return nil, err
 	}
 	return conn, nil
-}
-
-func (s stream) SupportsFeature(feature string) bool {
-	_, ok := s.features[feature]
-	return ok
 }
 
 func send(rw io.ReadWriter, command string) error {
