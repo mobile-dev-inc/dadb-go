@@ -16,8 +16,9 @@ type connection struct {
 }
 
 type stream struct {
-	io.ReadWriter
-	features map[string]struct{}
+	io.Reader
+	io.Writer
+	io.Closer
 }
 
 func Connect(address string, deviceQuery string) (dadb.Dadb, error) {
@@ -33,13 +34,14 @@ func Connect(address string, deviceQuery string) (dadb.Dadb, error) {
 }
 
 func (c connection) Open(destination string) (dadb.Stream, error) {
-	rw, err := open(c.address, c.deviceQuery, destination)
+	conn, err := open(c.address, c.deviceQuery, destination)
 	if err != nil {
 		return nil, err
 	}
 	return stream{
-		ReadWriter: rw,
-		features:   c.features,
+		Reader: conn,
+		Writer: conn,
+		Closer: conn,
 	}, nil
 }
 
@@ -64,7 +66,7 @@ func readFeatures(address string, deviceQuery string) (map[string]struct{}, erro
 	return features, nil
 }
 
-func open(address string, deviceQuery string, destination string) (io.ReadWriter, error) {
+func open(address string, deviceQuery string, destination string) (net.Conn, error) {
 	// TODO: Ensure server is running
 	conn, err := net.Dial("tcp", address)
 	if err != nil {

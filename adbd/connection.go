@@ -11,9 +11,9 @@ import (
 
 type connection struct {
 	sync.RWMutex
-
-	rw                 io.ReadWriter
-	closer             io.Closer
+	io.Reader
+	io.Writer
+	io.Closer
 	connectionResponse connectionResponse
 
 	nextLocalId   uint32
@@ -28,8 +28,9 @@ func Connect(conn net.Conn) (dadb.Dadb, error) {
 	}
 
 	connection := connection{
-		rw:                 conn,
-		closer:             conn,
+		Reader:             conn,
+		Writer:             conn,
+		Closer:             conn,
 		connectionResponse: response,
 		nextLocalId:        0,
 		channels:           make(map[uint32]map[uint32]chan packet),
@@ -67,7 +68,7 @@ func Connect(conn net.Conn) (dadb.Dadb, error) {
 func (c *connection) Open(destination string) (dadb.Stream, error) {
 	localId := atomic.AddUint32(&c.nextLocalId, 1)
 
-	err := writeOpen(c.rw, localId, destination)
+	err := writeOpen(c, localId, destination)
 	if err != nil {
 		return nil, err
 	}

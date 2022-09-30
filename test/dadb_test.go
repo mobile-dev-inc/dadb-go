@@ -14,6 +14,7 @@ import (
 func shellV1(t *testing.T, d dadb.Dadb) {
 	stream, err := d.Open("shell:echo hello")
 	require.NoError(t, err)
+	defer close(t, stream)
 	output, err := io.ReadAll(stream)
 	require.NoError(t, err)
 	require.Equal(t, string(output), "hello\n")
@@ -48,4 +49,9 @@ func createAdbServerDadb(t *testing.T) dadb.Dadb {
 	dadb, err := adbserver.Connect("localhost:5037", "host:transport-any")
 	require.NoError(t, err)
 	return dadb
+}
+
+func close(t *testing.T, c io.Closer) {
+	err := c.Close()
+	require.NoError(t, err)
 }

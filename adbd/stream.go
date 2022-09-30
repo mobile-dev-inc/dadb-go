@@ -24,7 +24,7 @@ func (s *stream) Read(p []byte) (int, error) {
 
 		s.payload = pkt.Payload
 
-		err := writePacket(s.connection.rw, packet{
+		err := writePacket(s.connection, packet{
 			Command: cmdOkay,
 			Arg0:    s.localId,
 			Arg1:    s.remoteId,
@@ -45,7 +45,7 @@ func (s *stream) Read(p []byte) (int, error) {
 
 func (s *stream) Write(p []byte) (int, error) {
 	// TODO what about when len(p) > s.connection.connectionResponse.maxPayloadSize?
-	err := writePacket(s.connection.rw, packet{
+	err := writePacket(s.connection, packet{
 		Command: cmdWrte,
 		Arg0:    s.localId,
 		Arg1:    s.remoteId,
@@ -61,6 +61,15 @@ func (s *stream) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+func (s *stream) Close() error {
+	err := writePacket(s.connection, packet{
+		Command: cmdClse,
+		Arg0:    s.localId,
+		Arg1:    s.remoteId,
+	})
+	return err
+}
+
 func (s *stream) getPayload() ([]byte, error) {
 	if len(s.payload) > 0 {
 		return s.payload, nil
@@ -68,7 +77,7 @@ func (s *stream) getPayload() ([]byte, error) {
 
 	pkt := <-s.connection.getChannel(s.localId, cmdWrte)
 
-	err := writePacket(s.connection.rw, packet{
+	err := writePacket(s.connection, packet{
 		Command: cmdOkay,
 		Arg0:    s.localId,
 		Arg1:    s.remoteId,
