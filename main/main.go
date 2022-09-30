@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dadb/adbd"
 	"golang.org/x/sync/errgroup"
 	"net"
 	"os"
@@ -12,7 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	connection, err := AdbdConnect(conn)
+	connection, err := adbd.Connect(conn)
 	if err != nil {
 		panic(err)
 	}

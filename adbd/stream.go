@@ -1,19 +1,19 @@
-package main
+package adbd
 
-type AdbdStream struct {
-	connection *AdbdConnection
+type Stream struct {
+	connection *Connection
 	localId    uint32
 	remoteId   uint32
 
 	payload []byte
 }
 
-func (s *AdbdStream) SupportsFeature(feature string) bool {
+func (s *Stream) SupportsFeature(feature string) bool {
 	_, ok := s.connection.connectionResponse.features[feature]
 	return ok
 }
 
-func (s *AdbdStream) Read(p []byte) (int, error) {
+func (s *Stream) Read(p []byte) (int, error) {
 	if len(s.payload) == 0 {
 		pkt := <-s.connection.getChannel(s.localId, cmdWrte)
 		s.payload = pkt.Payload
@@ -37,7 +37,7 @@ func (s *AdbdStream) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func (s *AdbdStream) Write(p []byte) (int, error) {
+func (s *Stream) Write(p []byte) (int, error) {
 	// TODO what about when len(p) > s.connection.connectionResponse.maxPayloadSize?
 	err := writePacket(s.connection.rw, packet{
 		Command: cmdWrte,
@@ -55,7 +55,7 @@ func (s *AdbdStream) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (s *AdbdStream) getPayload() ([]byte, error) {
+func (s *Stream) getPayload() ([]byte, error) {
 	if len(s.payload) > 0 {
 		return s.payload, nil
 	}

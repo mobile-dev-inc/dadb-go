@@ -1,4 +1,4 @@
-module dadb-go
+module dadb
 
 go 1.19
 

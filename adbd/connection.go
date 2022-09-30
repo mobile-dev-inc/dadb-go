@@ -1,6 +1,7 @@
-package main
+package adbd
 
 import (
+	"dadb"
 	"io"
 	"log"
 	"net"
@@ -8,7 +9,7 @@ import (
 	"sync/atomic"
 )
 
-type AdbdConnection struct {
+type Connection struct {
 	sync.RWMutex
 
 	rw                 io.ReadWriter
@@ -19,13 +20,13 @@ type AdbdConnection struct {
 	channels    map[uint32]map[uint32]chan packet
 }
 
-func AdbdConnect(conn net.Conn) (*AdbdConnection, error) {
+func Connect(conn net.Conn) (*Connection, error) {
 	response, err := connect(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	connection := AdbdConnection{
+	connection := Connection{
 		rw:                 conn,
 		closer:             conn,
 		connectionResponse: response,
@@ -51,7 +52,7 @@ func AdbdConnect(conn net.Conn) (*AdbdConnection, error) {
 	return &connection, nil
 }
 
-func (c *AdbdConnection) Open(destination string) (Stream, error) {
+func (c *Connection) Open(destination string) (dadb.Stream, error) {
 	localId := atomic.AddUint32(&c.nextLocalId, 1)
 
 	err := writeOpen(c.rw, localId, destination)
@@ -62,14 +63,14 @@ func (c *AdbdConnection) Open(destination string) (Stream, error) {
 	p := <-c.getChannel(localId, cmdOkay)
 	remoteId := p.Arg0
 
-	return &AdbdStream{
+	return &Stream{
 		connection: c,
 		localId:    localId,
 		remoteId:   remoteId,
 	}, nil
 }
 
-func (c *AdbdConnection) getChannel(localId uint32, cmd uint32) chan packet {
+func (c *Connection) getChannel(localId uint32, cmd uint32) chan packet {
 	// Fast path: Channel already exists - Only acquire read lock
 	c.RLock()
 	m := c.channels[localId]
