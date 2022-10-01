@@ -1,10 +1,8 @@
 package dadb
 
 import (
-	"dadb/adbd"
-	"dadb/adbserver"
+	"fmt"
 	"io"
-	"net"
 )
 
 type Connection interface {
@@ -22,18 +20,25 @@ type Dadb struct {
 	Connection
 }
 
-func CreateAdbd(conn net.Conn) (Dadb, error) {
-	connection, err := adbd.Connect(conn)
+func (d Dadb) Shell(command string) (ShellResponse, error) {
+	stream, err := d.OpenShell(command)
 	if err != nil {
-		return Dadb{}, err
+		return ShellResponse{}, err
 	}
-	return Dadb{Connection: connection}, nil
+	//goland:noinspection GoUnhandledErrorResult
+	defer stream.Close()
+
+	if err != nil {
+		return ShellResponse{}, err
+	}
+
+	return stream.ReadAll()
 }
 
-func CreateAdbServer(address string, deviceQuery string) (Dadb, error) {
-	connection, err := adbserver.Connect(address, deviceQuery)
+func (d Dadb) OpenShell(command string) (ShellStream, error) {
+	stream, err := d.Open(fmt.Sprintf("shell,v2,raw:%s", command))
 	if err != nil {
-		return Dadb{}, err
+		return ShellStream{}, err
 	}
-	return Dadb{Connection: connection}, nil
+	return ShellStream{s: stream}, nil
 }

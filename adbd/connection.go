@@ -21,10 +21,10 @@ type connection struct {
 	closedStreams map[uint32]struct{}
 }
 
-func Connect(conn net.Conn) (dadb.Connection, error) {
-	response, err := connect(conn)
+func connect(conn net.Conn) (connection, error) {
+	response, err := doConnect(conn)
 	if err != nil {
-		return nil, err
+		return connection{}, err
 	}
 
 	connection := connection{
@@ -62,7 +62,7 @@ func Connect(conn net.Conn) (dadb.Connection, error) {
 		}
 	}()
 
-	return &connection, nil
+	return connection, nil
 }
 
 func (c *connection) Open(destination string) (dadb.Stream, error) {

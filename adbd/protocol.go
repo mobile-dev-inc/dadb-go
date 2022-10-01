@@ -56,7 +56,7 @@ func writeOpen(w io.Writer, localId uint32, destination string) error {
 	})
 }
 
-func connect(conn io.ReadWriter) (connectionResponse, error) {
+func doConnect(conn io.ReadWriter) (connectionResponse, error) {
 	err := writeConnect(conn)
 	if err != nil {
 		return connectionResponse{}, err

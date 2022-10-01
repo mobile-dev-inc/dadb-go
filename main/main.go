@@ -13,12 +13,12 @@ func main() {
 		panic(err)
 	}
 
-	connection, err := adbd.Connect(conn)
+	dadb, err := adbd.CreateDadb(conn)
 	if err != nil {
 		panic(err)
 	}
 
-	stream, err := connection.Open("shell:")
+	stream, err := dadb.Open("shell:")
 	if err != nil {
 		panic(err)
 	}

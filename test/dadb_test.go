@@ -2,6 +2,8 @@ package test
 
 import (
 	"dadb"
+	"dadb/adbd"
+	"dadb/adbserver"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -22,13 +24,14 @@ func withStream(
 }
 
 func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
-	run := func(name string, f func(t *testing.T, d dadb.Connection)) {
+	run := func(name string, f func(t *testing.T, d dadb.Dadb)) {
 		testName := fmt.Sprintf("%s/%s", prefix, name)
 		t.Run(testName, func(t *testing.T) {
 			f(t, d)
 		})
 	}
 	run("shellV1", shellV1)
+	run("shellV2", shellV2)
 }
 
 func TestDadb(t *testing.T) {
@@ -41,13 +44,13 @@ func TestDadb(t *testing.T) {
 func connectAdbd(t *testing.T) dadb.Dadb {
 	conn, err := net.Dial("tcp", "localhost:5555")
 	require.NoError(t, err)
-	c, err := dadb.CreateAdbd(conn)
+	c, err := adbd.CreateDadb(conn)
 	require.NoError(t, err)
 	return c
 }
 
 func connectAdbServer(t *testing.T) dadb.Dadb {
-	c, err := dadb.CreateAdbServer("localhost:5037", "host:transport-any")
+	c, err := adbserver.CreateDadb("localhost:5037", "host:transport-any")
 	require.NoError(t, err)
 	return c
 }
