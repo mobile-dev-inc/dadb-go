@@ -21,7 +21,12 @@ type Connection struct {
 	closedStreams map[uint32]struct{}
 }
 
-func Connect(conn net.Conn) (*Connection, error) {
+func Connect(network string, address string) (*Connection, error) {
+	conn, err := net.Dial(network, address)
+	if err != nil {
+		return nil, err
+	}
+
 	response, err := doConnect(conn)
 	if err != nil {
 		return nil, err

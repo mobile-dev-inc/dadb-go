@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-type Connection interface {
+type Dadb interface {
 	Open(destination string) (Stream, error)
 	SupportsFeature(feature string) bool
 }
@@ -16,12 +16,8 @@ type Stream interface {
 	io.Closer
 }
 
-type Dadb struct {
-	Connection
-}
-
-func (d Dadb) Shell(command string) (ShellResponse, error) {
-	stream, err := d.OpenShell(command)
+func Shell(d Dadb, command string) (ShellResponse, error) {
+	stream, err := OpenShell(d, command)
 	if err != nil {
 		return ShellResponse{}, err
 	}
@@ -35,7 +31,7 @@ func (d Dadb) Shell(command string) (ShellResponse, error) {
 	return stream.ReadAll()
 }
 
-func (d Dadb) OpenShell(command string) (ShellStream, error) {
+func OpenShell(d Dadb, command string) (ShellStream, error) {
 	stream, err := d.Open(fmt.Sprintf("shell,v2,raw:%s", command))
 	if err != nil {
 		return ShellStream{}, err

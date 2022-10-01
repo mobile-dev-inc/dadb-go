@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"io"
-	"net"
 	"testing"
 )
 
 func withStream(
 	t *testing.T,
-	c dadb.Connection,
+	c dadb.Dadb,
 	destination string,
 	f func(stream dadb.Stream),
 ) {
@@ -42,15 +41,13 @@ func TestDadb(t *testing.T) {
 }
 
 func connectAdbd(t *testing.T) dadb.Dadb {
-	conn, err := net.Dial("tcp", "localhost:5555")
-	require.NoError(t, err)
-	c, err := adbd.CreateDadb(conn)
+	c, err := adbd.Connect("tcp", "localhost:5555")
 	require.NoError(t, err)
 	return c
 }
 
 func connectAdbServer(t *testing.T) dadb.Dadb {
-	c, err := adbserver.CreateDadb("localhost:5037", "host:transport-any")
+	c, err := adbserver.Connect("localhost:5037", "host:transport-any")
 	require.NoError(t, err)
 	return c
 }
