@@ -21,7 +21,7 @@ type ShellResponse struct {
 	ExitCode    int
 }
 
-type packetHeader struct {
+type shellPacketHeader struct {
 	Id  byte
 	Len uint32
 }
@@ -55,7 +55,7 @@ func (s ShellStream) ReadAll() (ShellResponse, error) {
 }
 
 func (s ShellStream) Read() (ShellPacket, error) {
-	header := packetHeader{}
+	header := shellPacketHeader{}
 	err := binary.Read(s.s, binary.LittleEndian, &header)
 	if err != nil {
 		return ShellPacket{}, err
@@ -76,7 +76,7 @@ func (s ShellStream) WriteString(string string) error {
 }
 
 func (s ShellStream) Write(id byte, payload []byte) error {
-	err := binary.Write(s.s, binary.LittleEndian, packetHeader{
+	err := binary.Write(s.s, binary.LittleEndian, shellPacketHeader{
 		Id:  id,
 		Len: uint32(len(payload)),
 	})
