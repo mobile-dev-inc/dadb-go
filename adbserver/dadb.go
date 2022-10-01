@@ -3,7 +3,7 @@ package adbserver
 import "dadb"
 
 func CreateDadb(address string, deviceQuery string) (dadb.Dadb, error) {
-	c, err := connect(address, deviceQuery)
+	c, err := Connect(address, deviceQuery)
 	if err != nil {
 		return dadb.Dadb{}, err
 	}

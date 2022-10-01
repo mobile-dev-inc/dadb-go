@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 )
 
-type connection struct {
+type Connection struct {
 	sync.RWMutex
 	io.Reader
 	io.Writer
@@ -21,13 +21,13 @@ type connection struct {
 	closedStreams map[uint32]struct{}
 }
 
-func connect(conn net.Conn) (connection, error) {
+func Connect(conn net.Conn) (*Connection, error) {
 	response, err := doConnect(conn)
 	if err != nil {
-		return connection{}, err
+		return nil, err
 	}
 
-	connection := connection{
+	connection := Connection{
 		Reader:             conn,
 		Writer:             conn,
 		Closer:             conn,
@@ -62,10 +62,10 @@ func connect(conn net.Conn) (connection, error) {
 		}
 	}()
 
-	return connection, nil
+	return &connection, nil
 }
 
-func (c *connection) Open(destination string) (dadb.Stream, error) {
+func (c *Connection) Open(destination string) (dadb.Stream, error) {
 	localId := atomic.AddUint32(&c.nextLocalId, 1)
 
 	err := writeOpen(c, localId, destination)
@@ -83,12 +83,12 @@ func (c *connection) Open(destination string) (dadb.Stream, error) {
 	}, nil
 }
 
-func (c *connection) SupportsFeature(feature string) bool {
+func (c *Connection) SupportsFeature(feature string) bool {
 	_, ok := c.connectionResponse.features[feature]
 	return ok
 }
 
-func (c *connection) closeStream(localId uint32) {
+func (c *Connection) closeStream(localId uint32) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -103,7 +103,7 @@ func (c *connection) closeStream(localId uint32) {
 	}
 }
 
-func (c *connection) getChannel(localId uint32, cmd uint32) chan packet {
+func (c *Connection) getChannel(localId uint32, cmd uint32) chan packet {
 	// Fast path: Channel already exists - Only acquire read lock
 	c.RLock()
 	m := c.channels[localId]

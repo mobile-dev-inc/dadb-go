@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-type connection struct {
+type Connection struct {
 	address     string
 	deviceQuery string
 	features    map[string]struct{}
@@ -21,19 +21,19 @@ type stream struct {
 	io.Closer
 }
 
-func connect(address string, deviceQuery string) (connection, error) {
+func Connect(address string, deviceQuery string) (Connection, error) {
 	features, err := readFeatures(address, deviceQuery)
 	if err != nil {
-		return connection{}, err
+		return Connection{}, err
 	}
-	return connection{
+	return Connection{
 		address:     address,
 		deviceQuery: deviceQuery,
 		features:    features,
 	}, nil
 }
 
-func (c connection) Open(destination string) (dadb.Stream, error) {
+func (c Connection) Open(destination string) (dadb.Stream, error) {
 	conn, err := open(c.address, c.deviceQuery, destination)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (c connection) Open(destination string) (dadb.Stream, error) {
 	}, nil
 }
 
-func (c connection) SupportsFeature(feature string) bool {
+func (c Connection) SupportsFeature(feature string) bool {
 	_, ok := c.features[feature]
 	return ok
 }

@@ -6,7 +6,7 @@ import (
 )
 
 func CreateDadb(conn net.Conn) (dadb.Dadb, error) {
-	connection, err := connect(conn)
+	connection, err := Connect(conn)
 	if err != nil {
 		return dadb.Dadb{}, err
 	}
