@@ -21,7 +21,7 @@ type connection struct {
 	closedStreams map[uint32]struct{}
 }
 
-func Connect(conn net.Conn) (dadb.Dadb, error) {
+func Connect(conn net.Conn) (dadb.Connection, error) {
 	response, err := connect(conn)
 	if err != nil {
 		return nil, err

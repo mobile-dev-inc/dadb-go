@@ -21,7 +21,7 @@ type stream struct {
 	io.Closer
 }
 
-func Connect(address string, deviceQuery string) (dadb.Dadb, error) {
+func Connect(address string, deviceQuery string) (dadb.Connection, error) {
 	features, err := readFeatures(address, deviceQuery)
 	if err != nil {
 		return nil, err
