@@ -15,6 +15,12 @@ type ShellPacket struct {
 	payload []byte
 }
 
+type ShellResponse struct {
+	output      string
+	errorOutput string
+	exitCode    int
+}
+
 type packetHeader struct {
 	id  byte
 	len uint32
@@ -22,6 +28,32 @@ type packetHeader struct {
 
 type ShellStream struct {
 	s Stream
+}
+
+func (s ShellStream) ReadAll() (ShellResponse, error) {
+	output := make([]byte, 0)
+	errorOutput := make([]byte, 0)
+
+	for {
+		packet, err := s.Read()
+		if err != nil {
+			return ShellResponse{}, err
+		}
+		switch packet.id {
+		case IdExit:
+			return ShellResponse{
+				output:      string(output),
+				errorOutput: string(errorOutput),
+				exitCode:    int(packet.payload[0]),
+			}, nil
+		case IdStdin:
+			output = append(output, packet.payload...)
+			break
+		case IdStderr:
+			errorOutput = append(errorOutput, packet.payload...)
+			break
+		}
+	}
 }
 
 func (s ShellStream) Read() (ShellPacket, error) {
