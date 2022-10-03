@@ -40,7 +40,21 @@ func Push(dadb Dadb, r io.Reader, remotePath string, mode uint32, lastModifiedSe
 		return err
 	}
 
-	return writeSyncPacket(ss.s, done, lastModifiedSec)
+	err = writeSyncPacket(ss.s, done, lastModifiedSec)
+	if err != nil {
+		return err
+	}
+
+	packet, err := readSyncPacket(ss.s)
+	if err != nil {
+		return err
+	}
+
+	if packet.id != okay {
+		return fmt.Errorf("expected okay packet: %s", packet.id)
+	}
+
+	return nil
 }
 
 func Pull(dadb Dadb, w io.Writer, remotePath string) error {
