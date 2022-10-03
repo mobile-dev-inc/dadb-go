@@ -2,6 +2,7 @@ package dadb
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 const IdStdin byte = 0
@@ -28,6 +29,29 @@ type shellPacketHeader struct {
 
 type ShellStream struct {
 	s Stream
+}
+
+func Shell(d Dadb, command string) (ShellResponse, error) {
+	stream, err := OpenShell(d, command)
+	if err != nil {
+		return ShellResponse{}, err
+	}
+	//goland:noinspection GoUnhandledErrorResult
+	defer stream.Close()
+
+	if err != nil {
+		return ShellResponse{}, err
+	}
+
+	return stream.ReadAll()
+}
+
+func OpenShell(d Dadb, command string) (ShellStream, error) {
+	stream, err := d.Open(fmt.Sprintf("shell,v2,raw:%s", command))
+	if err != nil {
+		return ShellStream{}, err
+	}
+	return ShellStream{s: stream}, nil
 }
 
 func (s ShellStream) ReadAll() (ShellResponse, error) {
