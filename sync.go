@@ -28,26 +28,33 @@ type syncStream struct {
 }
 
 func Push(dadb Dadb, r io.Reader, remotePath string, mode uint32, lastModifiedSec uint32) error {
-	stream, err := dadb.Open("sync:")
-	if err != nil {
-		return err
-	}
-
 	remote := fmt.Sprintf("%s,%d", remotePath, mode)
-	err = writeSyncPacketWithPayload(stream, send, []byte(remote))
+	ss, err := openSyncStream(dadb, send, remote)
 	if err != nil {
 		return err
 	}
-
-	syncStream := syncStream{s: stream}
 
 	// If needed, we can try increasing the buffer size here to improve performance
-	_, err = io.Copy(syncStream, r)
+	_, err = io.Copy(ss, r)
 	if err != nil {
 		return err
 	}
 
-	return writeSyncPacket(stream, done, lastModifiedSec)
+	return writeSyncPacket(ss.s, done, lastModifiedSec)
+}
+
+func Pull(dadb Dadb, w io.Writer, remotePath string) error {
+	ss, err := openSyncStream(dadb, recv, remotePath)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(w, ss)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s syncStream) Read(p []byte) (int, error) {
@@ -87,6 +94,20 @@ func (s syncStream) Write(p []byte) (int, error) {
 		return 0, err
 	}
 	return s.s.Write(p)
+}
+
+func openSyncStream(dadb Dadb, id string, remote string) (syncStream, error) {
+	stream, err := dadb.Open("sync:")
+	if err != nil {
+		return syncStream{}, err
+	}
+
+	err = writeSyncPacketWithPayload(stream, id, []byte(remote))
+	if err != nil {
+		return syncStream{}, err
+	}
+
+	return syncStream{s: stream}, nil
 }
 
 func readSyncPacket(r io.Reader) (syncPacket, error) {
