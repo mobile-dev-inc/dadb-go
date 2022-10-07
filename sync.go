@@ -27,9 +27,9 @@ type syncStream struct {
 	payload []byte
 }
 
-func Push(dadb Dadb, r io.Reader, remotePath string, mode uint32, lastModifiedSec uint32) error {
+func Push(d Dadb, r io.Reader, remotePath string, mode uint32, lastModifiedSec uint32) error {
 	remote := fmt.Sprintf("%s,%d", remotePath, mode)
-	ss, err := openSyncStream(dadb, send, remote)
+	ss, err := openSyncStream(d, send, remote)
 	if err != nil {
 		return err
 	}
@@ -116,8 +116,8 @@ func (s syncStream) quit() {
 	_ = writeSyncPacket(s.s, quit, 0)
 }
 
-func openSyncStream(dadb Dadb, id string, remote string) (syncStream, error) {
-	stream, err := dadb.Open("sync:")
+func openSyncStream(d Dadb, id string, remote string) (syncStream, error) {
+	stream, err := d.Open("sync:")
 	if err != nil {
 		return syncStream{}, err
 	}
