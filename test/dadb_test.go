@@ -10,6 +10,8 @@ import (
 	"testing"
 )
 
+const remoteFilePath = "/data/local/tmp/testfile"
+
 func withStream(
 	t *testing.T,
 	c dadb.Dadb,
@@ -24,6 +26,10 @@ func withStream(
 
 func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
 	run := func(name string, f func(t *testing.T, d dadb.Dadb)) {
+		_, err := dadb.Shell(d, fmt.Sprintf("rm -rf %s", remoteFilePath))
+		if err != nil {
+			require.NoError(t, err)
+		}
 		testName := fmt.Sprintf("%s/%s", prefix, name)
 		t.Run(testName, func(t *testing.T) {
 			f(t, d)
@@ -31,6 +37,7 @@ func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
 	}
 	run("shellV1", shellV1)
 	run("shellV2", shellV2)
+	run("push", push)
 }
 
 func TestDadb(t *testing.T) {
