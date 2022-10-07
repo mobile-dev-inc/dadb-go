@@ -33,6 +33,7 @@ func Push(dadb Dadb, r io.Reader, remotePath string, mode uint32, lastModifiedSe
 	if err != nil {
 		return err
 	}
+	defer ss.quit()
 
 	// If needed, we can try increasing the buffer size here to improve performance
 	_, err = io.Copy(ss, r)
@@ -62,6 +63,7 @@ func Pull(dadb Dadb, w io.Writer, remotePath string) error {
 	if err != nil {
 		return err
 	}
+	defer ss.quit()
 
 	_, err = io.Copy(w, ss)
 	if err != nil {
@@ -108,6 +110,10 @@ func (s syncStream) Write(p []byte) (int, error) {
 		return 0, err
 	}
 	return s.s.Write(p)
+}
+
+func (s syncStream) quit() {
+	_ = writeSyncPacket(s.s, quit, 0)
 }
 
 func openSyncStream(dadb Dadb, id string, remote string) (syncStream, error) {
