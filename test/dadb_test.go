@@ -28,9 +28,7 @@ func withStream(
 func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
 	run := func(name string, f func(t *testing.T, d dadb.Dadb)) {
 		_, err := dadb.Shell(d, fmt.Sprintf("rm -rf %s", remoteFilePath))
-		if err != nil {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		testName := fmt.Sprintf("%s/%s", prefix, name)
 		t.Run(testName, func(t *testing.T) {
 			f(t, d)
@@ -39,6 +37,7 @@ func runDadbTest(t *testing.T, d dadb.Dadb, prefix string) {
 	run("shellV1", shellV1)
 	run("shellV2", shellV2)
 	run("push", push)
+	run("pull", pull)
 }
 
 func TestDadb(t *testing.T) {
@@ -50,9 +49,7 @@ func TestDadb(t *testing.T) {
 
 func requireShell(t *testing.T, d dadb.Dadb, command string) string {
 	response, err := dadb.Shell(d, command)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 	assert.Equal(t, response.ExitCode, 0)
 	return response.Output
 }
