@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"dadb"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -15,9 +14,5 @@ func push(t *testing.T, d dadb.Dadb) {
 	if err != nil {
 		require.NoError(t, err)
 	}
-	response, err := dadb.Shell(d, fmt.Sprintf("cat %s", remoteFilePath))
-	if err != nil {
-		require.NoError(t, err)
-	}
-	assert.Equal(t, response.Output, "Hello World!")
+	requireShellOutput(t, d, fmt.Sprintf("cat %s", remoteFilePath), "Hello World!")
 }

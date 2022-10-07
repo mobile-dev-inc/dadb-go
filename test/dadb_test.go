@@ -5,6 +5,7 @@ import (
 	"dadb/adbd"
 	"dadb/adbserver"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
@@ -45,6 +46,20 @@ func TestDadb(t *testing.T) {
 	adbServerDadb := connectAdbServer(t)
 	runDadbTest(t, adbdDadb, "adbd")
 	runDadbTest(t, adbServerDadb, "adbserver")
+}
+
+func requireShell(t *testing.T, d dadb.Dadb, command string) string {
+	response, err := dadb.Shell(d, command)
+	if err != nil {
+		require.NoError(t, err)
+	}
+	assert.Equal(t, response.ExitCode, 0)
+	return response.Output
+}
+
+func requireShellOutput(t *testing.T, d dadb.Dadb, command string, expected string) {
+	output := requireShell(t, d, command)
+	assert.Equal(t, expected, output)
 }
 
 func connectAdbd(t *testing.T) dadb.Dadb {
