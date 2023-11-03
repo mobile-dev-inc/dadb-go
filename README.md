@@ -1,6 +1,6 @@
 # dadb-go
 
-Experimental implementation in go of [dadb](https://github.com/mobile-dev-inc/dadb), which is a Kotlin/Java library to connect directly to an Android device without an adb binary or an ADB server
+**Experimental** implementation in go of [dadb](https://github.com/mobile-dev-inc/dadb), which is a Kotlin/Java library to connect directly to an Android device without an adb binary or an ADB server
 
 ## License
 
